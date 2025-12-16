@@ -1,25 +1,52 @@
-// Persistencia simples usando Netlify Blobs.
+// Persistencia usando Netlify Blobs, com fallback em memoria quando o ambiente nao estiver configurado.
 const { getStore } = require("@netlify/blobs");
 
-const store = getStore({
-  name: "fila",
-  siteID: process.env.SITE_ID,
-});
+let memoryStore = {}; // fallback em memoria (nao persiste entre invocacoes)
 
-async function loadFila() {
-  const text = await store.get("fila.json", { type: "text" });
-  if (!text) return {};
+function createStore() {
+  const siteID = process.env.SITE_ID || process.env.BLOBS_SITE_ID;
+  const token =
+    process.env.BLOBS_TOKEN ||
+    process.env.NETLIFY_BLOBS_TOKEN ||
+    process.env.NETLIFY_BLOBS_WRITE_TOKEN;
+
+  // Se ambiente estiver pronto, usa Blobs com credenciais automaticas ou fornecidas.
+  if (siteID && token) {
+    return getStore({ name: "fila", siteID, token });
+  }
+
+  // Tenta usar configuracao implicita (quando Netlify injeta variaveis automaticamente).
   try {
-    return JSON.parse(text);
-  } catch {
-    return {};
+    return getStore({ name: "fila" });
+  } catch (err) {
+    // Sem Blobs configurado: fallback em memoria (nao persiste).
+    return null;
   }
 }
 
+const store = createStore();
+
+async function loadFila() {
+  if (store) {
+    const text = await store.get("fila.json", { type: "text" });
+    if (!text) return {};
+    try {
+      return JSON.parse(text);
+    } catch {
+      return {};
+    }
+  }
+  return memoryStore;
+}
+
 async function saveFila(data) {
-  await store.set("fila.json", JSON.stringify(data), {
-    metadata: { contentType: "application/json" },
-  });
+  if (store) {
+    await store.set("fila.json", JSON.stringify(data), {
+      metadata: { contentType: "application/json" },
+    });
+  } else {
+    memoryStore = data;
+  }
 }
 
 exports.handler = async (event) => {
