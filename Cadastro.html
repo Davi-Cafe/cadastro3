@@ -9,9 +9,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Cadastro de Veiculos</title>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
+  <!-- Sem Firebase: usando API do Netlify Functions -->
 
   <style>
     * {
@@ -252,24 +250,7 @@
   <div id="toast" class="toast"></div>
 
   <script>
-    // Configuracao do Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyC4QzvRKk-l7F9RbgIt_N7_It3FxZ_TIhM",
-      authDomain: "controle-carregamento.firebaseapp.com",
-      databaseURL: "https://controle-de-carros-ofr-default-rtdb.firebaseio.com",
-      projectId: "controle-carregamento",
-      storageBucket: "controle-carregamento.firebasestorage.app",
-      messagingSenderId: "880348216752",
-      appId: "1:880348216752:web:fbea1e525c37c877e22a75"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const authReady = firebase.auth().signInAnonymously()
-      .catch((error) => {
-        showToast("Erro de autenticacao anonima: " + error.message, true);
-        throw error;
-      });
+    const API_URL = "/api/fila";
 
     function showToast(message, isError = false) {
       const toast = document.getElementById('toast');
@@ -293,25 +274,24 @@
         return;
       }
 
-      try {
-        await authReady;
-      } catch (err) {
-        showToast("Sem permissao para escrever. Ajuste as regras do Firebase ou habilite Auth anonima.", true);
-        return;
-      }
-
-      const id = Date.now();
       const tipo = ofr ? "OFR" : "Normal";
 
-      db.ref("fila/" + id).set({
-        transporte: transporte.value,
-        placa: placa.value.toUpperCase(),
-        entrada: entrada.value,
-        chegada: chegada.value,
-        tipo: tipo,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
+      fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transporte: transporte.value,
+          placa: placa.value.toUpperCase(),
+          entrada: entrada.value,
+          chegada: chegada.value,
+          tipo
+        })
       })
-      .then(() => {
+      .then(async (res) => {
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || "Erro ao salvar");
+        }
         showToast("Veiculo " + tipo + " cadastrado com sucesso!");
         
         transporte.value = "";
@@ -321,11 +301,7 @@
         transporte.focus();
       })
       .catch((error) => {
-        const isPermission = error && (error.code === "PERMISSION_DENIED" || ("" + error).includes("Permission denied"));
-        const message = isPermission
-          ? "Sem permissao para escrever. Ajuste as regras do Firebase (auth anonima ou liberar fila)."
-          : "Erro ao cadastrar: " + error.message;
-        showToast(message, true);
+        showToast(error.message || "Erro ao cadastrar", true);
       });
     }
 
