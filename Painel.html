@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
+  <meta name="theme-color" content="#071028">
+  <meta name="description" content="Painel de visualizacao da fila de veiculos em tempo real">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Painel de Carregamento</title>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: linear-gradient(135deg, #071028 0%, #0f172a 100%);
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 20px;
+    }
+
+    .header h1 {
+      color: #38bdf8;
+      font-size: clamp(28px, 6vw, 48px);
+      margin-bottom: 10px;
+      text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+    }
+
+    .header-info {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+
+    .info-badge {
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: clamp(14px, 3vw, 18px);
+    }
+
+    .nav-link {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 12px 24px;
+      background: rgba(56, 189, 248, 0.2);
+      color: #38bdf8;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.3s;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .nav-link:hover {
+      background: rgba(56, 189, 248, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .table-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: clamp(14px, 2.5vw, 20px);
+      min-width: 600px;
+    }
+
+    thead {
+      background: rgba(56, 189, 248, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    th {
+      padding: clamp(12px, 2vw, 20px);
+      text-align: center;
+      color: #38bdf8;
+      font-weight: 600;
+      border-bottom: 2px solid rgba(56, 189, 248, 0.3);
+      font-size: clamp(14px, 2.5vw, 18px);
+    }
+
+    td {
+      padding: clamp(12px, 2vw, 20px);
+      text-align: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    tbody tr {
+      transition: all 0.3s;
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    tbody tr:hover {
+      background: rgba(56, 189, 248, 0.1);
+      transform: scale(1.01);
+    }
+
+    .ofr {
+      background: linear-gradient(90deg, rgba(127, 29, 29, 0.3) 0%, rgba(185, 28, 28, 0.2) 100%);
+      border-left: 4px solid #dc2626;
+      font-weight: bold;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+      }
+      50% {
+        box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+      }
+    }
+
+    .ofr:hover {
+      background: linear-gradient(90deg, rgba(127, 29, 29, 0.4) 0%, rgba(185, 28, 28, 0.3) 100%);
+    }
+
+    .tempo-alerta {
+      color: #fbbf24;
+      font-weight: bold;
+    }
+
+    .tempo-critico {
+      color: #dc2626;
+      font-weight: bold;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #64748b;
+      font-size: clamp(18px, 4vw, 24px);
+    }
+
+    .empty-state::before {
+      content: "⋯";
+      display: block;
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+
+      .header {
+        padding: 15px;
+      }
+
+      table {
+        font-size: 14px;
+      }
+
+      th, td {
+        padding: 10px 8px;
+      }
+    }
+
+    @media (min-width: 1920px) {
+      body {
+        padding: 40px;
+      }
+
+      table {
+        font-size: 24px;
+      }
+
+      th, td {
+        padding: 24px;
+      }
+    }
+
+    @media (orientation: landscape) and (max-height: 600px) {
+      .header {
+        margin-bottom: 15px;
+      }
+
+      .header h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <h1>Painel de Carregamento</h1>
+    <div class="header-info">
+      <div class="info-badge" id="totalVeiculos">Total: 0</div>
+      <div class="info-badge" id="totalOFR">OFR: 0</div>
+      <div class="info-badge" id="totalNormal">Normal: 0</div>
+    </div>
+    <a href="Cadastro.html" class="nav-link">Novo Cadastro</a>
+    <a href="index.html" class="nav-link">Inicio</a>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Transporte</th>
+          <th>Placa</th>
+          <th>Chegada</th>
+          <th>Tempo em area</th>
+          <th>Tipo</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr>
+          <td colspan="6" class="empty-state">Carregando...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // Configuracao do Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyC4QzvRKk-l7F9RbgIt_N7_It3FxZ_TIhM",
+      authDomain: "controle-carregamento.firebaseapp.com",
+      databaseURL: "https://controle-de-carros-ofr-default-rtdb.firebaseio.com",
+      projectId: "controle-carregamento",
+      storageBucket: "controle-carregamento.firebasestorage.app",
+      messagingSenderId: "880348216752",
+      appId: "1:880348216752:web:fbea1e525c37c877e22a75"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const tbody = document.getElementById("tbody");
+    const authReady = firebase.auth().signInAnonymously()
+      .catch((error) => {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="empty-state">Erro de autenticacao anonima: ${error.message}</td>
+          </tr>`;
+        throw error;
+      });
+
+    let fila = {};
+
+    function tempo(iso) {
+      const diff = Date.now() - new Date(iso).getTime();
+      const m = Math.floor(diff / 60000);
+      const h = Math.floor(m / 60);
+      const min = m % 60;
+      
+      if (m < 0) return "-";
+      if (h > 0) return h + "h " + min + "min";
+      return m + " min";
+    }
+
+    function getTempoClass(minutos) {
+      if (minutos < 0) return "";
+      if (minutos > 120) return "tempo-critico";
+      if (minutos > 60) return "tempo-alerta";
+      return "";
+    }
+
+    function atualizarEstatisticas(lista) {
+      const total = lista.length;
+      const ofr = lista.filter(v => v.tipo === "OFR").length;
+      const normal = total - ofr;
+
+      document.getElementById('totalVeiculos').textContent = "Total: " + total;
+      document.getElementById('totalOFR').textContent = "OFR: " + ofr;
+      document.getElementById('totalNormal').textContent = "Normal: " + normal;
+    }
+
+    function render() {
+      const lista = Object.entries(fila)
+        .map(([id, v]) => ({ id, ...v }))
+        .sort((a, b) => {
+          if (a.tipo === "OFR" && b.tipo !== "OFR") return -1;
+          if (a.tipo !== "OFR" && b.tipo === "OFR") return 1;
+          return new Date(b.chegada) - new Date(a.chegada);
+        });
+
+      if (lista.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="empty-state">Nenhum veiculo cadastrado</td>
+          </tr>`;
+        atualizarEstatisticas([]);
+        return;
+      }
+
+      tbody.innerHTML = "";
+      lista.forEach((v, i) => {
+        const minutos = Math.floor((Date.now() - new Date(v.chegada).getTime()) / 60000);
+        const tempoClass = getTempoClass(minutos);
+        const tempoStr = tempo(v.chegada);
+        
+        tbody.innerHTML += `
+          <tr class="${v.tipo === "OFR" ? "ofr" : ""}">
+            <td>${i + 1}</td>
+            <td>${v.transporte}</td>
+            <td><strong>${v.placa}</strong></td>
+            <td>${new Date(v.chegada).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</td>
+            <td class="${tempoClass}">${tempoStr}</td>
+            <td><strong>${v.tipo}</strong></td>
+          </tr>`;
+      });
+
+      atualizarEstatisticas(lista);
+    }
+
+    function iniciarListener() {
+      db.ref("fila").on("value", snap => {
+        fila = snap.val() || {};
+        render();
+      });
+
+      // Atualiza contagem do tempo periodicamente
+      setInterval(render, 10000);
+    }
+
+    authReady.then(iniciarListener).catch(() => {
+      // ja mostramos mensagem na tabela
+    });
+  </script>
+</body>
+</html>

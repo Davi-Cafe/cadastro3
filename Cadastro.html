@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
+  <meta name="theme-color" content="#16a34a">
+  <meta name="description" content="Cadastro de veiculos na fila de carregamento">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Cadastro de Veiculos</title>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-auth-compat.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 30px;
+      animation: slideUp 0.5s ease;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      color: #1e293b;
+      font-size: clamp(24px, 5vw, 32px);
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      color: #64748b;
+      font-size: clamp(14px, 3vw, 16px);
+    }
+
+    .nav-link {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 10px 20px;
+      background: #f1f5f9;
+      color: #475569;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .nav-link:hover {
+      background: #e2e8f0;
+      transform: translateY(-2px);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 8px;
+      font-size: clamp(14px, 3vw, 16px);
+    }
+
+    input {
+      width: 100%;
+      padding: 16px;
+      font-size: clamp(16px, 4vw, 18px);
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      transition: all 0.3s;
+      background: #f8fafc;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .button-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 30px;
+    }
+
+    button {
+      padding: 18px;
+      font-size: clamp(16px, 4vw, 18px);
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .normal {
+      background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+      color: #fff;
+    }
+
+    .normal:hover {
+      background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+      box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4);
+    }
+
+    .ofr {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      color: #fff;
+    }
+
+    .ofr:hover {
+      background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+      box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #16a34a;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 1000;
+      font-weight: 500;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast.error {
+      background: #dc2626;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 10px;
+      }
+
+      .container {
+        padding: 20px;
+        border-radius: 16px;
+      }
+
+      .button-group {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (min-width: 1920px) {
+      .container {
+        max-width: 800px;
+        padding: 40px;
+      }
+
+      input, button {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Cadastro de Veiculos</h1>
+      <p>Preencha os dados do veiculo</p>
+      <a href="Painel.html" class="nav-link">Ver Painel</a>
+      <a href="index.html" class="nav-link">Inicio</a>
+    </div>
+
+    <form id="formCadastro" onsubmit="return false;">
+      <div class="form-group">
+        <label for="transporte">Numero do Transporte</label>
+        <input id="transporte" type="number" min="1" required>
+      </div>
+
+      <div class="form-group">
+        <label for="placa">Placa</label>
+        <input id="placa" type="text" maxlength="7" style="text-transform:uppercase" required>
+      </div>
+
+      <div class="form-group">
+        <label for="entrada">Entrada Usina</label>
+        <input id="entrada" type="datetime-local" required>
+      </div>
+
+      <div class="form-group">
+        <label for="chegada">Chegada area</label>
+        <input id="chegada" type="datetime-local" required>
+      </div>
+
+      <div class="button-group">
+        <button type="button" class="normal" onclick="adicionar(false)">
+          Adicionar Normal
+        </button>
+        <button type="button" class="ofr" onclick="adicionar(true)">
+          Adicionar OFR
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // Configuracao do Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyC4QzvRKk-l7F9RbgIt_N7_It3FxZ_TIhM",
+      authDomain: "controle-carregamento.firebaseapp.com",
+      databaseURL: "https://controle-de-carros-ofr-default-rtdb.firebaseio.com",
+      projectId: "controle-carregamento",
+      storageBucket: "controle-carregamento.firebasestorage.app",
+      messagingSenderId: "880348216752",
+      appId: "1:880348216752:web:fbea1e525c37c877e22a75"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const authReady = firebase.auth().signInAnonymously()
+      .catch((error) => {
+        showToast("Erro de autenticacao anonima: " + error.message, true);
+        throw error;
+      });
+
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = 'toast' + (isError ? ' error' : '');
+      toast.classList.add('show');
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    async function adicionar(ofr) {
+      const transporte = document.getElementById('transporte');
+      const placa = document.getElementById('placa');
+      const entrada = document.getElementById('entrada');
+      const chegada = document.getElementById('chegada');
+
+      if (!transporte.value || !placa.value || !entrada.value || !chegada.value) {
+        showToast("Preencha todos os campos!", true);
+        return;
+      }
+
+      try {
+        await authReady;
+      } catch (err) {
+        showToast("Sem permissao para escrever. Ajuste as regras do Firebase ou habilite Auth anonima.", true);
+        return;
+      }
+
+      const id = Date.now();
+      const tipo = ofr ? "OFR" : "Normal";
+
+      db.ref("fila/" + id).set({
+        transporte: transporte.value,
+        placa: placa.value.toUpperCase(),
+        entrada: entrada.value,
+        chegada: chegada.value,
+        tipo: tipo,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      })
+      .then(() => {
+        showToast("Veiculo " + tipo + " cadastrado com sucesso!");
+        
+        transporte.value = "";
+        placa.value = "";
+        entrada.value = "";
+        chegada.value = "";
+        transporte.focus();
+      })
+      .catch((error) => {
+        const isPermission = error && (error.code === "PERMISSION_DENIED" || ("" + error).includes("Permission denied"));
+        const message = isPermission
+          ? "Sem permissao para escrever. Ajuste as regras do Firebase (auth anonima ou liberar fila)."
+          : "Erro ao cadastrar: " + error.message;
+        showToast(message, true);
+      });
+    }
+
+    // Preencher data/hora atual como padrao
+    window.addEventListener('DOMContentLoaded', () => {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      const nowStr = now.toISOString().slice(0, 16);
+      
+      document.getElementById('entrada').value = nowStr;
+      document.getElementById('chegada').value = nowStr;
+    });
+
+    // Permitir Enter para navegar pelos campos
+    document.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        const inputs = document.querySelectorAll('input');
+        const focused = Array.from(inputs).indexOf(document.activeElement);
+        if (focused < inputs.length - 1) {
+          inputs[focused + 1].focus();
+        }
+      }
+    });
+  </script>
+</body>
+</html>
