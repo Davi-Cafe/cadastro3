@@ -10,11 +10,8 @@
   <title>Painel de Carregamento</title>
 
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    /* 🔒 ESTILO ORIGINAL – NÃO ALTERADO */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       background: linear-gradient(135deg, #071028 0%, #0f172a 100%);
@@ -24,7 +21,6 @@
       min-height: 100vh;
     }
 
-    /* RELÓGIO */
     #clock {
       position: fixed;
       top: 16px;
@@ -40,12 +36,7 @@
       z-index: 1000;
     }
 
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-      padding: 20px;
-    }
-
+    .header { text-align: center; margin-bottom: 30px; padding: 20px; }
     .header h1 {
       color: #38bdf8;
       font-size: clamp(28px, 6vw, 48px);
@@ -95,18 +86,8 @@
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 700px;
-    }
-
-    thead {
-      background: rgba(56, 189, 248, 0.1);
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
+    table { width: 100%; border-collapse: collapse; min-width: 700px; }
+    thead { background: rgba(56, 189, 248, 0.1); position: sticky; top: 0; z-index: 10; }
 
     th, td {
       padding: 14px;
@@ -114,14 +95,9 @@
       border-bottom: 1px solid rgba(255,255,255,0.1);
     }
 
-    th {
-      color: #38bdf8;
-      font-weight: 600;
-    }
+    th { color: #38bdf8; font-weight: 600; }
 
-    tbody tr:hover {
-      background: rgba(56, 189, 248, 0.1);
-    }
+    tbody tr:hover { background: rgba(56, 189, 248, 0.1); }
 
     .ofr {
       background: linear-gradient(90deg, rgba(127, 29, 29, 0.3), rgba(185, 28, 28, 0.2));
@@ -129,21 +105,14 @@
       font-weight: bold;
     }
 
-    .tempo-alerta {
-      color: #fbbf24;
-      font-weight: bold;
-    }
-
+    .tempo-alerta { color: #fbbf24; font-weight: bold; }
     .tempo-critico {
       color: #dc2626;
       font-weight: bold;
       animation: blink 1s infinite;
     }
 
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
+    @keyframes blink { 50% { opacity: 0.5; } }
 
     .empty-state {
       text-align: center;
@@ -227,7 +196,7 @@
       .sort((a, b) => {
         if (a.tipo === "OFR" && b.tipo !== "OFR") return -1;
         if (a.tipo !== "OFR" && b.tipo === "OFR") return 1;
-        return new Date(b.chegada) - new Date(a.chegada);
+        return new Date(a.chegada) - new Date(b.chegada); // FIFO
       });
 
     if (!lista.length) {
@@ -239,7 +208,9 @@
     tbody.innerHTML = "";
     lista.forEach((v, i) => {
       const areaMin = Math.floor((Date.now() - new Date(v.chegada)) / 60000);
-      const usinaMin = v.entradaUsina ? Math.floor((Date.now() - new Date(v.entradaUsina)) / 60000) : -1;
+      const usinaMin = v.entrada
+        ? Math.floor((Date.now() - new Date(v.entrada)) / 60000)
+        : -1;
 
       tbody.innerHTML += `
         <tr class="${v.tipo === "OFR" ? "ofr" : ""}">
@@ -248,7 +219,7 @@
           <td><strong>${v.placa}</strong></td>
           <td>${new Date(v.chegada).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</td>
           <td class="${getTempoClass(areaMin)}">${tempo(v.chegada)}</td>
-          <td class="${getTempoClass(usinaMin)}">${v.entradaUsina ? tempo(v.entradaUsina) : "-"}</td>
+          <td class="${getTempoClass(usinaMin)}">${v.entrada ? tempo(v.entrada) : "-"}</td>
           <td><strong>${v.tipo}</strong></td>
         </tr>`;
     });
