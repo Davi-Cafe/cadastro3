@@ -53,7 +53,7 @@ exports.handler = async (event) => {
   // CORS permissive para demo; ajuste Origin se quiser restringir
   const headers = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Content-Type": "application/json",
   };
@@ -92,6 +92,22 @@ exports.handler = async (event) => {
     };
     await saveFila(fila);
     return { statusCode: 200, headers, body: JSON.stringify({ ok: true, id }) };
+  }
+
+  if (event.httpMethod === "DELETE") {
+    const id = (event.path || "").split("/").pop(); // id vem no final da rota /fila/:id
+    if (!id) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: "ID obrigatorio" }) };
+    }
+
+    const fila = await loadFila();
+    if (!fila[id]) {
+      return { statusCode: 404, headers, body: JSON.stringify({ error: "Registro nao encontrado" }) };
+    }
+
+    delete fila[id];
+    await saveFila(fila);
+    return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
   }
 
   return { statusCode: 405, headers, body: JSON.stringify({ error: "Method not allowed" }) };
