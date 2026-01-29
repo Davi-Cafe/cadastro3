@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -72,13 +72,7 @@ button{
   padding:6px 10px;
   border-radius:6px;
 }
-.download{
-  background:#16a34a;
-  color:#fff;
-  padding:10px 14px;
-  border-radius:8px;
-  margin-bottom:10px;
-}
+
 table{
   width:100%;
   border-collapse:collapse;
@@ -114,7 +108,7 @@ th,td{
 
   <div class="tabs">
     <button class="active" onclick="openTab(event,'cadastro')">Cadastro</button>
-    <button onclick="openTab(event,'gerenciar')">Gerenciar / Relatório</button>
+    <button onclick="openTab(event,'gerenciar')">Gerenciar</button>
   </div>
 
   <!-- CADASTRO (INALTERADO NA LÓGICA) -->
@@ -137,9 +131,8 @@ th,td{
     </div>
   </section>
 
-  <!-- GERENCIAR / RELATÓRIO -->
+  <!-- GERENCIAR -->
   <section id="gerenciar">
-    <button class="download" onclick="baixarRelatorio()">⬇ Baixar Relatório</button>
 
     <table>
       <thead>
@@ -234,17 +227,6 @@ async function remover(id){
   carregar();
 }
 
-function baixarRelatorio(){
-  const linhas=[["Transporte","Placa","Chegada","Entrada","Tipo"]];
-  Object.values(fila).forEach(v=>{
-    linhas.push([v.transporte,v.placa,v.chegada,v.entrada,v.tipo]);
-  });
-  const csv=linhas.map(l=>l.join(";")).join("\n");
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
-  a.download="relatorio_veiculos.csv";
-  a.click();
-}
 
 /* atalhos */
 const transporteInput=document.getElementById("transporte");
@@ -263,3 +245,4 @@ window.addEventListener("DOMContentLoaded",()=>{
 
 </body>
 </html>
+
